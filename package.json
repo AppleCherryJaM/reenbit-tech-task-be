@@ -1,0 +1,50 @@
+{
+  "name": "reenbit-tech-task-be",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "npm run lint && tsc",
+    "start": "node build/app.js",
+    "type-check": "tsc --noEmit",
+    "lint": "biome lint src/",
+    "lint:fix": "biome lint --fix src/",
+    "format": "biome format src/",
+    "format:fix": "biome format --write src/",
+    "check": "biome check src/",
+    "check:fix": "biome check --fix src/",
+    "ci": "biome ci src/",
+    "dev:no-lint": "nodemon --exec \"ts-node src/app.ts\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AppleCherryJaM/reenbit-tech-task-be.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AppleCherryJaM/reenbit-tech-task-be/issues"
+  },
+  "homepage": "https://github.com/AppleCherryJaM/reenbit-tech-task-be#readme",
+  "dependencies": {
+    "@prisma/client": "^6.16.3",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "passport-google-oauth20": "^2.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.5",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.2",
+    "dotenv": "^17.2.3",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.16.3",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,10 @@
+# Biome
+.biome/cache
+
+# Build
+build/
+node_modules/
+
+# Environment variables
+.env
+/src/generated/prisma
