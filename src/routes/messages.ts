@@ -18,13 +18,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Text and chat ID are required' });
     }
 
-    // Проверяем, что чат принадлежит пользователю
     const hasAccess = await dbService.validateChatOwnership(userId, chatId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access to chat denied' });
     }
 
-    // Save user message
+    
     const userMessage = await dbService.createMessage(text, chatId, userId, 'user');
     
     res.json(userMessage);
@@ -33,11 +32,19 @@ router.post('/', async (req, res) => {
     setTimeout(async () => {
       try {
         const autoResponse = await quoteService.getAutoResponse();
-        const botMessage = await dbService.createMessage(autoResponse, chatId, undefined, 'auto');
+        console.log(`AutoResponse: ${autoResponse}`);
         
+        const botMessage = await dbService.createMessage(autoResponse, chatId, undefined, 'auto');
+        console.log(`AutoMessage: ${botMessage.id}`);
+
         // Emit via Socket.io
-        req.app.get('io').to(`chat:${chatId}`).emit('message:new', botMessage);
-        req.app.get('io').emit('notification:new', { 
+        const io = req.app.get('io');
+        console.log(`chat: ${chatId}`);
+        
+        io.to(`chat:${chatId}`).emit('message:new', botMessage);
+        console.log("Socket emitted successfully");
+
+        io.emit('notification:new', { 
           type: 'new_message', 
           chatId,
           message: botMessage 
@@ -48,6 +55,7 @@ router.post('/', async (req, res) => {
     }, 3000);
 
   } catch (_error) {
+    console.error(`Failed to send message: ${_error}`)
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
