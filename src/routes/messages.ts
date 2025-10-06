@@ -44,6 +44,8 @@ router.post('/', async (req, res) => {
         io.to(`chat:${chatId}`).emit('message:new', botMessage);
         console.log("Socket emitted successfully");
 
+        io.emit('message:new', botMessage);
+        
         io.emit('notification:new', { 
           type: 'new_message', 
           chatId,
