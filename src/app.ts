@@ -18,6 +18,9 @@ import { authMiddleware } from './middlewares/auth';
 
 dotenv.config();
 const FE_ENDPOINT = process.env.FRONTEND_ENDPOINT;
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:5173'];
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,8 +28,9 @@ const httpServer = createServer(app);
 // Socket.io
 const io = new Server(httpServer, {
   cors: {
-    origin: FE_ENDPOINT,
-    methods: ["GET", "POST"]
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
