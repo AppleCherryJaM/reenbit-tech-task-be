@@ -6,16 +6,21 @@ export type MessageWithUser = Message & { user?: User };
 export type ChatWithMessages = Chat & { messages: MessageWithUser[] };
 
 export const dbService = {
-  // Chat operations - теперь работают с userId из базы
   async createChat(userId: string, firstName: string, lastName: string) {
     try {
       console.log('💾 Creating chat for user ID:', userId);
       
+      const user = await this.findUser('google', userId);
+
+      if (!user) {
+        throw new Error(`User not found for provider ID: ${userId}`);
+      }
+
       const chat = await prisma.chat.create({
         data: { 
           firstName, 
           lastName,
-          userId
+          userId: user.id
         }
       });
       
@@ -30,10 +35,17 @@ export const dbService = {
   async updateChat(userId: string, chatId: string, firstName: string, lastName: string) {
     console.log('✏️ Updating chat:', { userId, chatId, firstName, lastName });
     
+    const user = await this.findUser('google', userId);
+
+    if (!user) {
+      console.log('❌ User not found for providerId:', userId);
+      return false;
+    }
+
     return await prisma.chat.update({
       where: { 
         id: chatId,
-        userId: userId // Проверяем принадлежность пользователю
+        userId: user.id // Проверяем принадлежность пользователю
       },
       data: { firstName, lastName }
     });
@@ -42,10 +54,17 @@ export const dbService = {
   async deleteChat(userId: string, chatId: string) {
     console.log('🗑️ Deleting chat:', { userId, chatId });
     
+    const user = await this.findUser('google', userId);
+
+    if (!user) {
+      console.log('❌ User not found for providerId:', userId);
+      return false;
+    }
+
     return await prisma.chat.delete({
       where: { 
         id: chatId,
-        userId: userId // Проверяем принадлежность пользователю
+        userId: user.id 
       }
     });
   },
@@ -161,7 +180,6 @@ export const dbService = {
         data: { provider, providerId, email, name, avatar }
       });
 
-      // Создаем 3 предопределенных чата для нового пользователя
       const predefinedChats = [
         { firstName: 'John', lastName: 'Doe' },
         { firstName: 'Jane', lastName: 'Smith' },
@@ -172,7 +190,7 @@ export const dbService = {
 
       for (const chat of predefinedChats) {
         try {
-          await this.createChat(user.id, chat.firstName, chat.lastName);
+          await this.createChat(providerId, chat.firstName, chat.lastName);
           console.log(`✅ Created chat: ${chat.firstName} ${chat.lastName}`);
         } catch (error) {
           console.error(`❌ Failed to create chat ${chat.firstName} ${chat.lastName}:`, error);
@@ -186,7 +204,6 @@ export const dbService = {
     return user;
   },
 
-  // Проверка принадлежности чата пользователю (теперь по userId из базы)
   async validateChatOwnership(userId: string, chatId: string): Promise<boolean> {
     console.log('🔐 Validating chat ownership:', { userId, chatId });
     
@@ -202,7 +219,6 @@ export const dbService = {
     return isValid;
   },
 
-  // Новый метод для получения пользователя по ID из базы
   async getUserById(userId: string) {
     console.log('👤 Getting user by ID:', userId);
     
@@ -211,7 +227,6 @@ export const dbService = {
     });
   },
 
-  // Метод для получения пользователя по email (может пригодиться)
   async getUserByEmail(email: string) {
     console.log('👤 Getting user by email:', email);
     
