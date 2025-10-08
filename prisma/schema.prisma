@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(cuid()) @map("_id")
   email     String   @unique
   name      String?
   avatar    String?
-  provider  String   // 'google', 'facebook', etc.
-  providerId String? // ID from third-party provider
+  provider  String 
+  providerId String? @unique 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -24,10 +24,10 @@ model User {
 }
 
 model Chat {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(cuid()) @map("_id")
   firstName String   
   lastName  String   
-  userId    String   @db.ObjectId
+  userId    String   
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -35,16 +35,16 @@ model Chat {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
   
-  @@index([userId]) // Для быстрого поиска чатов пользователя
+  @@index([userId])
   @@map("chats")
 }
 
 model Message {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(cuid()) @map("_id")
   text      String   
-  type      String   @default("user") // 'user', 'auto', 'system'
-  userId    String?  @db.ObjectId 
-  chatId    String   @db.ObjectId
+  type      String   @default("user")
+  userId    String?  
+  chatId    String   
   createdAt DateTime @default(now())
   
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
