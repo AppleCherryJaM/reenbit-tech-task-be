@@ -85,7 +85,7 @@ router.put('/:chatId', async (req, res) => {
     }
 
     const chat = await dbService.updateChat(userId, chatId, firstName, lastName);
-    console.log('✅ Chat updated:', chat.id);
+    console.log('✅ Chat updated:', chat);
     res.json(chat);
   } catch (error) {
     console.error('❌ PUT /chats error:', error);
@@ -93,26 +93,25 @@ router.put('/:chatId', async (req, res) => {
   }
 });
 
-// Delete user's chat
-  router.delete('/:chatId', async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      const { chatId } = req.params;
+router.delete('/:chatId', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { chatId } = req.params;
 
-      console.log('🗑️ DELETE /chats - User:', userId, 'Chat:', chatId);
+    console.log('🗑️ DELETE /chats - User:', userId, 'Chat:', chatId);
 
-      if (!userId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-
-      await dbService.deleteChat(userId, chatId);
-      console.log('✅ Chat deleted:', chatId);
-      res.json({ message: 'Chat deleted successfully' });
-    } catch (error) {
-      console.error('❌ DELETE /chats error:', error);
-      res.status(500).json({ error: 'Failed to delete chat' });
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
-  });
+
+    await dbService.deleteChat(userId, chatId);
+    console.log('✅ Chat deleted:', chatId);
+    res.json({ message: 'Chat deleted successfully' });
+  } catch (error) {
+    console.error('❌ DELETE /chats error:', error);
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+});
 
 // Get messages from user's chat
 router.get('/:chatId/messages', async (req, res) => {
