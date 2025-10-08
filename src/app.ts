@@ -17,6 +17,7 @@ import { dbService } from './services/db.service';
 import { authMiddleware } from './middlewares/auth';
 
 dotenv.config();
+const FE_ENDPOINT = process.env.FRONTEND_ENDPOINT;
 
 const app = express();
 const httpServer = createServer(app);
@@ -24,7 +25,7 @@ const httpServer = createServer(app);
 // Socket.io
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: FE_ENDPOINT,
     methods: ["GET", "POST"]
   }
 });
@@ -63,7 +64,6 @@ io.on('connection', (socket) => {
   socket.on('live:messages:start', async (userId: string) => {
     console.log('Live messages started for user:', userId);
     
-    // Получаем все чаты пользователя
     const userChats = await dbService.getAllChats(userId);
     
     if (userChats.length === 0) {
@@ -71,7 +71,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Интервал для случайных сообщений
     const intervalId = setInterval(async () => {
       try {
         const randomChat = userChats[Math.floor(Math.random() * userChats.length)];
@@ -86,7 +85,6 @@ io.on('connection', (socket) => {
           'auto'
         );
         
-        // Отправляем сообщение в конкретный чат
         io.to(`chat:${randomChat.id}`).emit('message:new', botMessage);
         socket.emit('notification:new', {
           type: 'live_message',
@@ -97,9 +95,8 @@ io.on('connection', (socket) => {
       } catch (error) {
         console.error('Live message failed:', error);
       }
-    }, 5000); // Каждые 5 секунд
+    }, 5000); 
 
-    // Сохраняем intervalId для остановки
     socket.data.liveMessagesInterval = intervalId;
   });
 
@@ -112,39 +109,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    // Очищаем интервал при отключении
     if (socket.data.liveMessagesInterval) {
       clearInterval(socket.data.liveMessagesInterval);
     }
     console.log('User disconnected:', socket.id);
   });
 });
-
-// Initialize predefined chats for demo user on startup
-// async function initializeDemoUserChats() {
-//   try {
-//     // Просто используем валидный 24-символьный hex ID
-//     const demoUserId = '65f21a8b7c1d2a4e5f6a7b8c'; // Только 0-9, a-f
-//     const existingChats = await dbService.getAllChats(demoUserId);
-    
-//     if (existingChats.length === 0) {
-//       const predefinedChats = [
-//         { firstName: 'John', lastName: 'Doe' },
-//         { firstName: 'Jane', lastName: 'Smith' },
-//         { firstName: 'Bob', lastName: 'Johnson' }
-//       ];
-
-//       for (const chat of predefinedChats) {
-//         await dbService.createChat(demoUserId, chat.firstName, chat.lastName);
-//       }
-//       console.log('✅ Predefined chats created for demo user');
-//     } else {
-//       console.log('✅ Predefined chats already exist');
-//     }
-//   } catch (error) {
-//     console.error('❌ Failed to initialize demo chats:', error);
-//   }
-// }
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -156,7 +126,7 @@ app.get('/api/test', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 httpServer.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
