@@ -6,62 +6,89 @@ export type MessageWithUser = Message & { user?: User };
 export type ChatWithMessages = Chat & { messages: MessageWithUser[] };
 
 export const dbService = {
-  // Chat operations - теперь требуют userId
+  // Chat operations - теперь работают с userId из базы
   async createChat(userId: string, firstName: string, lastName: string) {
-    return await prisma.chat.create({
-      data: { 
-        firstName, 
-        lastName,
-        userId 
-      }
-    });
+    try {
+      console.log('💾 Creating chat for user ID:', userId);
+      
+      const chat = await prisma.chat.create({
+        data: { 
+          firstName, 
+          lastName,
+          userId
+        }
+      });
+      
+      console.log('✅ Chat created with ID:', chat.id, 'for user ID:', userId);
+      return chat;
+    } catch (error) {
+      console.error('❌ Database error creating chat:', error);
+      throw error;
+    }
   },
 
   async updateChat(userId: string, chatId: string, firstName: string, lastName: string) {
-    // Проверяем, что чат принадлежит пользователю
+    console.log('✏️ Updating chat:', { userId, chatId, firstName, lastName });
+    
     return await prisma.chat.update({
       where: { 
         id: chatId,
-        userId // Важно: только свои чаты можно обновлять
+        userId: userId // Проверяем принадлежность пользователю
       },
       data: { firstName, lastName }
     });
   },
 
   async deleteChat(userId: string, chatId: string) {
-    // Проверяем, что чат принадлежит пользователю
+    console.log('🗑️ Deleting chat:', { userId, chatId });
+    
     return await prisma.chat.delete({
       where: { 
         id: chatId,
-        userId // Важно: только свои чаты можно удалять
+        userId: userId // Проверяем принадлежность пользователю
       }
     });
   },
 
   async getAllChats(userId: string, search?: string) {
-    return await prisma.chat.findMany({
-      where: {
-        userId, // Только чаты текущего пользователя
-        ...(search && {
-          OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } }
-          ]
-        })
-      },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1, // Последнее сообщение в чате
-          include: { user: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    console.log('💾 DB: Getting chats for user ID:', userId);
+    
+    const user = await dbService.findUser('google', userId);
+    
+
+    try {
+      const chats = await prisma.chat.findMany({
+        where: {
+          userId: user?.id,
+          ...(search && {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } }
+            ]
+          })
+        },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: { user: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      console.log('💾 DB: Chats found:', chats.length);
+      return chats;
+    } catch (error) {
+      console.error('💾 DB Error in getAllChats:', error);
+      throw error;
+    }
   },
 
   // Message operations
   async createMessage(text: string, chatId: string, userId?: string, type: string = 'user') {
+    console.log('💬 Creating message:', { chatId, userId, type, textLength: text.length });
+    
     return await prisma.message.create({
       data: {
         text,
@@ -74,29 +101,54 @@ export const dbService = {
   },
 
   async getChatMessages(userId: string, chatId: string) {
-    // Проверяем, что чат принадлежит пользователю
-    const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId }
-    });
+    console.log('📥 Getting messages for chat:', { userId, chatId });
+    
+    try {
+      // Сначала проверяем, что чат принадлежит пользователю
+      const chat = await prisma.chat.findFirst({
+        where: { 
+          id: chatId, 
+          userId: userId 
+        }
+      });
 
-    if (!chat) {
-      throw new Error('Chat not found or access denied');
+      if (!chat) {
+        throw new Error('Chat not found or access denied');
+      }
+
+      // Затем получаем сообщения
+      const messages = await prisma.message.findMany({
+        where: { chatId },
+        include: { user: true },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      console.log('✅ Messages fetched:', messages.length);
+      return messages;
+    } catch (error) {
+      console.error('❌ Error getting chat messages:', error);
+      throw error;
     }
-
-    return await prisma.message.findMany({
-      where: { chatId },
-      include: { user: true },
-      orderBy: { createdAt: 'asc' }
-    });
   },
 
   // User operations (for OAuth)
+  async findUser(provider: string, providerId: string) {
+    console.log('🔍 Finding user:', { provider, providerId });
+    
+    return await prisma.user.findFirst({
+      where: { provider, providerId }
+    });
+  },
+  
   async findOrCreateUser(provider: string, providerId: string, email: string, name?: string, avatar?: string) {
+    console.log('🔍 Finding/creating user:', { provider, providerId, email });
+    
     let user = await prisma.user.findFirst({
       where: { provider, providerId }
     });
 
     if (!user) {
+      console.log('🆕 Creating NEW user:', email);
       user = await prisma.user.create({
         data: { provider, providerId, email, name, avatar }
       });
@@ -107,20 +159,56 @@ export const dbService = {
         { firstName: 'Jane', lastName: 'Smith' },
         { firstName: 'Bob', lastName: 'Johnson' }
       ];
+      
+      console.log('📝 Creating predefined chats for new user');
 
       for (const chat of predefinedChats) {
-        await this.createChat(user.id, chat.firstName, chat.lastName);
+        try {
+          await this.createChat(user.id, chat.firstName, chat.lastName);
+          console.log(`✅ Created chat: ${chat.firstName} ${chat.lastName}`);
+        } catch (error) {
+          console.error(`❌ Failed to create chat ${chat.firstName} ${chat.lastName}:`, error);
+        }
       }
+      console.log('🎉 New user setup completed');
+    } else {
+      console.log('👤 Existing user found:', user.email);
     }
 
     return user;
   },
 
-  // Проверка принадлежности чата пользователю
+  // Проверка принадлежности чата пользователю (теперь по userId из базы)
   async validateChatOwnership(userId: string, chatId: string): Promise<boolean> {
+    console.log('🔐 Validating chat ownership:', { userId, chatId });
+    
     const chat = await prisma.chat.findFirst({
-      where: { id: chatId, userId }
+      where: { 
+        id: chatId, 
+        userId: userId 
+      }
     });
-    return !!chat;
+    
+    const isValid = !!chat;
+    console.log('✅ Chat ownership valid:', isValid);
+    return isValid;
+  },
+
+  // Новый метод для получения пользователя по ID из базы
+  async getUserById(userId: string) {
+    console.log('👤 Getting user by ID:', userId);
+    
+    return await prisma.user.findUnique({
+      where: { id: userId }
+    });
+  },
+
+  // Метод для получения пользователя по email (может пригодиться)
+  async getUserByEmail(email: string) {
+    console.log('👤 Getting user by email:', email);
+    
+    return await prisma.user.findUnique({
+      where: { email }
+    });
   }
 };

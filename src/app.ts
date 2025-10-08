@@ -8,10 +8,10 @@ import dotenv from 'dotenv';
 import chatRoutes from './routes/chats';
 import messageRoutes from './routes/messages';
 import authRoutes from './routes/auth';
+import liveMessagesRoutes from './routes/live-messages';
 
 // Services
 import { dbService } from './services/db.service';
-// Убрали: import { quoteService } from './services/quote.service'; // ❌ Не используется здесь
 
 // Middleware
 import { authMiddleware } from './middlewares/auth';
@@ -38,7 +38,10 @@ app.use(express.json());
 // Routes with authentication
 app.use('/api/chats', authMiddleware, chatRoutes);
 app.use('/api/messages', authMiddleware, messageRoutes);
-app.use('/api/auth', authRoutes); // No auth required for login
+app.use('/api/live-messages', authMiddleware, liveMessagesRoutes);
+
+// Routes that can create users
+app.use('/api/auth', authRoutes);
 
 // Socket.io handlers
 io.on('connection', (socket) => {
@@ -118,30 +121,30 @@ io.on('connection', (socket) => {
 });
 
 // Initialize predefined chats for demo user on startup
-async function initializeDemoUserChats() {
-  try {
-    // Просто используем валидный 24-символьный hex ID
-    const demoUserId = '65f21a8b7c1d2a4e5f6a7b8c'; // Только 0-9, a-f
-    const existingChats = await dbService.getAllChats(demoUserId);
+// async function initializeDemoUserChats() {
+//   try {
+//     // Просто используем валидный 24-символьный hex ID
+//     const demoUserId = '65f21a8b7c1d2a4e5f6a7b8c'; // Только 0-9, a-f
+//     const existingChats = await dbService.getAllChats(demoUserId);
     
-    if (existingChats.length === 0) {
-      const predefinedChats = [
-        { firstName: 'John', lastName: 'Doe' },
-        { firstName: 'Jane', lastName: 'Smith' },
-        { firstName: 'Bob', lastName: 'Johnson' }
-      ];
+//     if (existingChats.length === 0) {
+//       const predefinedChats = [
+//         { firstName: 'John', lastName: 'Doe' },
+//         { firstName: 'Jane', lastName: 'Smith' },
+//         { firstName: 'Bob', lastName: 'Johnson' }
+//       ];
 
-      for (const chat of predefinedChats) {
-        await dbService.createChat(demoUserId, chat.firstName, chat.lastName);
-      }
-      console.log('✅ Predefined chats created for demo user');
-    } else {
-      console.log('✅ Predefined chats already exist');
-    }
-  } catch (error) {
-    console.error('❌ Failed to initialize demo chats:', error);
-  }
-}
+//       for (const chat of predefinedChats) {
+//         await dbService.createChat(demoUserId, chat.firstName, chat.lastName);
+//       }
+//       console.log('✅ Predefined chats created for demo user');
+//     } else {
+//       console.log('✅ Predefined chats already exist');
+//     }
+//   } catch (error) {
+//     console.error('❌ Failed to initialize demo chats:', error);
+//   }
+// }
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -156,8 +159,8 @@ app.get('/api/test', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 httpServer.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  await initializeDemoUserChats();
+  console.log(`Server running on port ${PORT}`);
+  console.log(`OAuth configured with Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Yes' : 'No'}`);
 });
 
 export { app };

@@ -1,9 +1,10 @@
+// middlewares/authVerify.ts
 import type { Request, Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authVerifyMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -13,7 +14,7 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     const token = authHeader.substring(7);
     
-    console.log('🔐 Auth middleware: Token received, length:', token.length);
+    console.log('🔐 Auth Verify: Token verification');
     
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -26,10 +27,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    console.log('✅ Auth middleware: Google token verified for:', payload.email);
-    console.log('🆔 Auth middleware: Google ID from token:', payload.sub);
+    console.log('✅ Auth Verify: Google token verified for:', payload.email);
     
-    // Используем Google ID
     req.user = {
       id: payload.sub, // Google ID
       email: payload.email!,
@@ -37,24 +36,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       picture: payload.picture || ''
     };
 
-    console.log('👤 Auth middleware: User set with ID:', req.user.id);
-
     next();
   } catch (error) {
-    console.error('❌ Auth middleware error:', error);
+    console.error('❌ Auth Verify error:', error);
     return res.status(401).json({ error: 'Authentication failed' });
   }
 };
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        name: string;
-        picture: string;
-      };
-    }
-  }
-}
