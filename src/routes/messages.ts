@@ -9,6 +9,7 @@ router.post('/', async (req, res) => {
   try {
     const userId = req.user?.id;
     const { text, chatId } = req.body;
+    console.log(` AAAAAAAAAAA User id: ${userId}`);
 
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -18,7 +19,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Text and chat ID are required' });
     }
 
-    const hasAccess = await dbService.validateChatOwnership(userId, chatId);
+    const user = await dbService.findUser('google', userId);
+    
+    if (!user) {
+      console.error('❌ User not found in database');
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const hasAccess = await dbService.validateChatOwnership(user.id, chatId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access to chat denied' });
     }

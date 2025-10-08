@@ -103,12 +103,20 @@ export const dbService = {
   async getChatMessages(userId: string, chatId: string) {
     console.log('📥 Getting messages for chat:', { userId, chatId });
     
+    const user = await prisma.user.findFirst({
+      where: {
+        providerId: userId
+      }
+    });
+
+    console.log(`getChatMessages User: ${JSON.stringify(user)}`);
+
     try {
       // Сначала проверяем, что чат принадлежит пользователю
       const chat = await prisma.chat.findFirst({
         where: { 
           id: chatId, 
-          userId: userId 
+          userId: user?.id
         }
       });
 
